@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <nav>
+            <router-link to="/top">Top Page</router-link>
+            <router-link to="/users">Users Page</router-link>
+        </nav>
+        <router-view></router-view>
+    </div>
+    <script src="./node_modules/vue/dist/vue.js"></script>
+    <script src="./node_modules/vue-router/dist/vue-router.js"></script>
+    <script type="text/x-template" id="user-list">
+        <div>ユーザー一覧ページ</div>
+        <div class="loading" v-if="loading">読み込み中....</div>
+        <div class="error" v-if="error">
+            {{error}}
+        </div>
+        <div v-for="user in users" :key="user.id">
+            <h2>{{user.name}}</h2>
+        </div>
+    </script>
+    <script>
+        var UserList = {
+            template: '#user-list'
+        }
+        var router = new VueRouter({
+            routes:[
+                {
+                    path: '/top',
+                    component:{
+                        template:'<div>Topページ</div>'
+                    }
+                    
+                },
+                {
+                    path: '/users',
+                    component:UserList
+                }
+            ]
+        })
+        var app = new Vue({
+            el:'#app',
+            router:router,
+        })
+    </script>
+</body>
+</html>
