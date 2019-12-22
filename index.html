@@ -11,24 +11,193 @@
         <nav>
             <router-link to="/top">Top Page</router-link>
             <router-link to="/users">Users Page</router-link>
+            <router-link to="/users/new">Create New User Page</router-link>
         </nav>
         <router-view></router-view>
     </div>
     <script src="./node_modules/vue/dist/vue.js"></script>
     <script src="./node_modules/vue-router/dist/vue-router.js"></script>
     <script type="text/x-template" id="user-list">
-        <div>ユーザー一覧ページ</div>
-        <div class="loading" v-if="loading">読み込み中....</div>
-        <div class="error" v-if="error">
-            {{error}}
+        <div>
+            <div>ユーザー一覧ページ</div>
+            <div class="loading" v-if="loading">読み込み中....</div>
+            <div class="error" v-if="error">
+                {{error}}
+            </div>
+            <div v-for="user in users" :key="user.id">
+                <h2><router-link :to="{name:'users',params:{ userId:user.id }}">{{user.name}}</router-link></h2>
+            </div>
         </div>
-        <div v-for="user in users" :key="user.id">
-            <h2>{{user.name}}</h2>
+    </script>
+    <script type="text/x-template" id="user-detail">
+        <div>
+            <div class="loading">読み込み中......</div>
+            <div class="error" v-if="error">
+                {{error}}
+            </div>
+            <div v-if="user">
+                <h2>{{user.name}}</h2>
+                <p>{{user.description}}</p>
+            </div>
+        </div>
+    </script>
+    <script type="text/x-template" id="user-create">
+        <div>
+            <div class="sending" v-if="sending">Sending......</div>
+            <div>
+                <h2>新規ユーザー作成</h2>
+                <div>
+                    <label>名前</label>
+                    <input type="text" v-model="user.name">
+                </div>
+                <div>
+                    <label>説明文</label>
+                    <textarea v-model="user.description" cols="30" rows="10"></textarea>
+                </div>
+                <div class="error" v-if="error">
+                    {{error}}
+                </div>
+                <div v-if="user">
+                    <input type="button" @click="createUser" value="送信">
+                </div>
+            </div>
         </div>
     </script>
     <script>
+        var userData = [
+            {
+                id: 1,
+                name: 'user-1',
+                description: 'user-1の詳細'
+            },
+            {
+                id: 2,
+                name: 'user-2',
+                description: 'user-2の詳細'
+            }
+        ]
+        var getUsers = function(callback){
+            setTimeout(function(){
+                callback(null, userData)
+            },500);
+        }
+        var getUser = function(userId,callback){
+            setTimeout(function(){
+                var filteredUsers = userData.filter(function(user){
+                    return user.id === parseInt(userId,10)
+                })
+                //expr1 && expr2 → expr1 を false と見ることができる場合は、expr1 を返します。そうでない場合は、expr2 を返します。
+                callback(null,filteredUsers && filteredUsers[0])
+            },500);
+        }
+        var postUser = function(params,callback){
+            console.log(params)
+            setTimeout(function(){
+                params.id = userData.length + 1;
+                userData.push(params)
+                console.log(params)
+                callback(null,params)
+            },500)
+        }
         var UserList = {
-            template: '#user-list'
+            template: '#user-list',
+            data:function(){
+                return {
+                    loading:false,
+                    users:function(){ return []},
+                    error:null
+                }
+            },
+            created:function(){
+                this.fetchData()
+            },
+            watch:{
+                '$route':'fetchData'
+            },
+            methods:{
+                fetchData:function(){
+                    this.loading = true
+                    getUsers((function(err,users){
+                        this.loading = false
+                        if(err){
+                            this.error = err.toString()
+                        } else {
+                            this.users = users
+                        }
+                    }).bind(this))
+                }
+            }
+        }
+        var UserDetail = {
+            template: '#user-detail',
+            data:function(){
+                return {
+                    loading:false,
+                    user:null,
+                    error:null
+                }
+            },
+            created(){
+                this.fetchData()
+            },
+            watch:{
+                '$route':'fetchData'
+            },
+            methods:{
+                fetchData(){
+                    this.loading = true
+                    getUser(this.$route.params.userId,(function(err,user){
+                        this.loading = false
+                        if(err){
+                            this.error = err.toString()
+                        } else {
+                            this.user = user
+                        }
+                    }).bind(this))
+                }
+            }
+        }
+        var UserCreate = {
+            template:'#user-create',
+            data:function(){
+                return {
+                    sending:false,
+                    user:this.defaultUser(),
+                    error:null
+                }
+            },
+            created:function(){
+
+            },
+            methods:{
+                defaultUser(){
+                    return {
+                        name:'',
+                        description:''
+                    }
+                },
+                createUser(){
+                    this.error = ''
+                    if(this.user.name.trim() === ''){
+                        this.error += '名前は必須です  '
+                    }
+                    if(this.user.description.trim() === ''){
+                        this.error += '説明文は必須です'
+                    }
+                    if(this.error.trim() !== '') return
+                    postUser(this.user,(function(err,user){
+                        this.sending = false
+                        if(err){
+                            this.error = err.toString()
+                        } else {
+                            this.error = null
+                            this.user = this.defaultUser()
+                            alert('新規ユーザーが作成されました')
+                            this.$router.push('/users')
+                        }
+                    }).bind(this))
+                }
+            }
         }
         var router = new VueRouter({
             routes:[
@@ -36,12 +205,22 @@
                     path: '/top',
                     component:{
                         template:'<div>Topページ</div>'
-                    }
-                    
+                    }        
                 },
                 {
                     path: '/users',
                     component:UserList
+                },
+                {
+                    path:'/users/new',
+                    component:UserCreate
+                },
+                {
+                    //動的ルートマッチング
+                    //https://router.vuejs.org/guide/essentials/dynamic-matching.html#reacting-to-params-changes
+                    path:'/users/:userId',
+                    name:'users',
+                    component:UserDetail
                 }
             ]
         })
