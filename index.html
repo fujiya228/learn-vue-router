@@ -11,7 +11,9 @@
         <nav>
             <router-link to="/top">Top Page</router-link>
             <router-link to="/users">Users Page</router-link>
-            <router-link to="/users/new">Create New User Page</router-link>
+            <router-link to="/users/new?redirect=true">Create New User</router-link>
+            <router-link to="/login" v-show="!Auth.loggedIn()">Login</router-link>
+            <router-link to="/logout" v-show="Auth.loggedIn()">Logout</router-link>
         </nav>
         <router-view></router-view>
     </div>
@@ -61,6 +63,19 @@
                     <input type="button" @click="createUser" value="送信">
                 </div>
             </div>
+        </div>
+    </script>
+    <script type="text/x-template" id="login">
+        <div>
+            <h2>Login</h2>
+            <p v-if="$route.query.redirect">ログインしてください</p>
+            <form @submit.prevent="login">
+                <label><input v-model="email" placeholder="name"></label>
+                <label><input v-model="pass" placeholder="password" type="password"></label>
+                <br>
+                <button type="submit">ログイン</button>
+                <p v-if="error" class="error">ログインに失敗しました</p>
+            </form>
         </div>
     </script>
     <script>
@@ -199,6 +214,45 @@
                 }
             }
         }
+        var Auth = {
+            login:function(email,pass,cb){
+                setTimeout(function(){
+                    if(email === 'vue@example.com' && pass === 'vue'){
+                        localStorage.token = Math.random().toString(36).substring(7)
+                        if(cb) { cb(true) }
+                    } else {
+                        if(cb) { cb(false) }
+                    }
+                },0)
+            },
+            logout:function(){
+                delete localStorage.token
+            },
+            loggedIn:function(){
+                return !!localStorage.token
+            }
+        }
+        var Login = {
+            template: '#login',
+            data: function(){
+                return {
+                    email:'vue@example.com',
+                    pass:'',
+                    error:false
+                }
+            },
+            methods:{
+                login(){
+                    Auth.login(this.email,this.pass,(function(loggedIn){
+                        if(!loggedIn){
+                            this.error = true
+                        } else {
+                            this.$router.replace(this.$route.query.redirect || '/')
+                        }
+                    }).bind(this))
+                }
+            }
+        }
         var router = new VueRouter({
             routes:[
                 {
@@ -213,7 +267,17 @@
                 },
                 {
                     path:'/users/new',
-                    component:UserCreate
+                    component:UserCreate,
+                    beforeEnter:function(to,from,next){
+                        if(!Auth.loggedIn()){
+                            next({
+                                path:'/login',
+                                query:{ redirect:to.fullPath }
+                            })
+                        } else {
+                            next()
+                        }
+                    }
                 },
                 {
                     //動的ルートマッチング
@@ -221,11 +285,25 @@
                     path:'/users/:userId',
                     name:'users',
                     component:UserDetail
+                },
+                {
+                    path:'/login',
+                    component:Login
+                },
+                {
+                    path:'/logout',
+                    beforeEnter:function(to,from,next){
+                        Auth.logout()
+                        next('/')
+                    }
                 }
             ]
         })
         var app = new Vue({
             el:'#app',
+            data:{
+                Auth: Auth,
+            },
             router:router,
         })
     </script>
